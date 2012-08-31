@@ -9,7 +9,8 @@
   (route/not-found "Page not found"))
 
 (defn -main [& args]
-  (start-http-server (wrap-ring-handler app-routes)
-                     {:host "localhost"
-                      :port 8080
-                      :websocket true}))
+  (let [port (-> (first args) (or 8080) (Integer.))]
+    (start-http-server (wrap-ring-handler app-routes)
+                       {:host "localhost"
+                        :port port
+                        :websocket true})))
