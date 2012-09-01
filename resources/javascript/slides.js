@@ -3,8 +3,16 @@ var $window = $(window);
 var animations = [];
 
 var processing_handler = function (processing) {
-  processing.setup = function () {
+  var fit_to_window = function () {
     processing.size($window.innerWidth(), $window.innerHeight());
+  };
+
+  processing.setup = function () {
+    fit_to_window();
+
+    $(window).on('resize', function () {
+      fit_to_window();
+    });
   };
 
   var clear = function () {
@@ -32,6 +40,18 @@ var processing_handler = function (processing) {
 
       return animation;
     });
+
+    processing.textFont(processing.loadFont("FFScala.ttf"));
+    processing.fill(0);
+    processing.textSize(36);
+    processing.text("PLAY >>>>", 100, 350);
+
+    processing.textSize(112);
+    processing.text("fp(x)", 100, 300);
+
+    processing.fill(0, 0, 0, 20);
+    processing.textSize(412);
+    processing.text("fp(x)", $window.innerWidth() / 3, $window.innerHeight() / 1.1);
   };
 };
 
