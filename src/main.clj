@@ -1,11 +1,34 @@
 (ns main
   (:use aleph.http
-        compojure.core)
+        compojure.core
+        lamina.core)
   (:require [compojure.route :as route]))
 
+(defn on-create [channel]
+  (receive-all channel #(println "message: " %)))
+
+(defn command-handler [response-channel]
+  (let [commands (named-channel "commands" on-create)]
+    (siphon commands response-channel)
+    (siphon response-channel commands)))
+
+(def pwd (System/getProperty "user.dir"))
+
+(def page (slurp (str pwd "/resources/index.html")))
+
+(defn index-page [request]
+  {:status 200
+   :headers {"content-type" "text/html"}
+   :body page})
+
+(defn render [response-channel request]
+  (if (:websocket request)
+    (command-handler response-channel)
+    (enqueue response-channel (index-page request))))
+
 (defroutes app-routes
-  (route/files "/" {:root (str (System/getProperty "user.dir") "/resources")})
-  (route/resources "/")
+  (GET ["/"] {} (wrap-aleph-handler render))
+  (route/files "/" {:root (str pwd "/resources")})
   (route/not-found "Page not found"))
 
 (defn -main [& args]
