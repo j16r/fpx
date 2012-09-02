@@ -2,11 +2,35 @@ var $window = $(window);
 
 var animations = [];
 var slides = [];
-var current_slide = 0;
+var currentSlide = 0;
+var slidesByName = {
+  intro: 0,
+  quote: 1,
+};
 
 var processing_handler = function (processing) {
+  var findSlideIndex = function (name) {
+    return slidesByName[name] || 0;
+  };
+
+  var findSlideName = function (index) {
+    var slideName = null;
+    _.each(slidesByName, function (slide, name) {
+      if(slide == index) {
+        slideName = name;
+        return true;
+      }
+    });
+    return slideName;
+  };
+
   var fit_to_window = function () {
     processing.size($window.innerWidth(), $window.innerHeight());
+
+    var params = $.deparam.querystring();
+    if(params.slide) {
+      currentSlide = findSlideIndex(params.slide);
+    }
   };
 
   var create_slides = function () {
@@ -83,19 +107,19 @@ var processing_handler = function (processing) {
   processing.draw = function() {
     clear();
 
-    var slide = slides[current_slide];
+    var slide = slides[currentSlide];
     slide.draw();
   };
 
   var nextSlide = function () {
-    if(current_slide < slides.length - 1) {
-      current_slide++;
+    if(currentSlide < slides.length - 1) {
+      $.bbq.pushState({slide: findSlideName(currentSlide + 1)}, 2);
     }
   };
 
   var previousSlide = function () {
-    if(current_slide > 0) {
-      current_slide--;
+    if(currentSlide > 0) {
+      $.bbq.pushState({slide: findSlideName(currentSlide - 1)}, 2);
     }
   };
 
@@ -110,6 +134,11 @@ var processing_handler = function (processing) {
       previousSlide();
     }
   };
+
+  $(window).bind('hashchange', function (event) {
+    var slideIndex = event.getState('slide');
+    currentSlide = findSlideIndex(slideIndex);
+  });
 };
 
 $(function () {
