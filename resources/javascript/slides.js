@@ -1,4 +1,5 @@
 var $window = $(window);
+var socket = null;
 
 var processingHandler = function (processing) {
   var slides = [];
@@ -15,7 +16,6 @@ var processingHandler = function (processing) {
   var fonts = {};
 
   var findSlideIndex = function (name) {
-    console.log(name);
     return slidesByName[name] || 0;
   };
 
@@ -32,13 +32,6 @@ var processingHandler = function (processing) {
 
   var fitToWindow = function () {
     processing.size($window.innerWidth(), $window.innerHeight());
-
-    var params = $.deparam.querystring();
-    if(params.slide) {
-      switchToSlide(params.slide);
-    } else {
-      switchToSlide('intro');
-    }
   };
 
   var createSlides = function () {
@@ -54,6 +47,7 @@ var processingHandler = function (processing) {
         this.animations.push({
           lifetime: Math.random() * 100,
           radius: Math.random() * 100,
+          color: [169, 199, 235, 220],
           x: Math.random() * $window.innerWidth(),
           y: Math.random() * $window.innerHeight()});
       },
@@ -64,7 +58,7 @@ var processingHandler = function (processing) {
           }
 
           processing.noStroke();
-          processing.fill(169, 199, 235, 220);
+          processing.fill(animation.color[0], animation.color[1], animation.color[2], animation.color[3]);
           processing.ellipse(animation.x, animation.y, animation.lifetime, animation.lifetime);
 
           return animation;
@@ -106,7 +100,6 @@ var processingHandler = function (processing) {
         this.animations = [];
       },
       render: function () {
-        console.log('alpha', this.alpha);
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge)
         processing.textAlign(processing.PConstants.CENTER);
@@ -115,21 +108,7 @@ var processingHandler = function (processing) {
         processing.text("-- Alan Kay", $window.innerWidth() / 1.8, $window.innerHeight() / 1.5);
       },
       draw: function () {
-        //this.animations = $.map(this.animations, function (animation, index) {
-          ////if(--animation.lifetime <= 0) {
-            ////return null;
-          ////}
-
-          //processing.alpha(100);
-          //processing.noStroke();
-          //processing.fill(169, 199, 235);
-          //processing.ellipse(animation.x, animation.y, animation.lifetime, animation.lifetime);
-
-          //return animation;
-        //});
-
         this.render();
-
       },
       outTransition: function () {
         this.alpha -= 8;
@@ -151,14 +130,40 @@ var processingHandler = function (processing) {
     fonts.quicksand = processing.createFont("Quicksand", 24);
   };
 
-  processing.setup = function () {
-    loadFonts();
-    createSlides();
-    fitToWindow(); 
+  var setInitialSlide = function () {
+    var params = $.deparam.querystring();
+    if(params.slide) {
+      switchToSlide(params.slide);
+    } else {
+      switchToSlide('intro');
+    }
   };
 
   var clear = function () {
     processing.background(processing.color(159, 189, 225));
+  };
+
+  processing.setup = function () {
+    loadFonts();
+    createSlides();
+    fitToWindow(); 
+    setInitialSlide();
+
+    socket = new WebSocket("ws://" + location.host);
+
+    socket.onmessage = function(message) {
+      var command = JSON.parse(message.data);
+
+      if(command.command === "mouseClick") {
+        var slide = slides[currentSlide];
+        slide.animations.push({
+          color: [169, 230, 235, 220],
+          lifetime: Math.random() * 100,
+          radius: Math.random() * 100,
+          x: command.x,
+          y: command.y});
+      }
+    };
   };
 
   processing.draw = function() {
@@ -174,7 +179,6 @@ var processingHandler = function (processing) {
       slide.inTransition();
 
       if(transitionLifetime-- == 0) {
-        console.log("transition finished");
         inTransition = false;
         previousSlide = currentSlide
       }
@@ -209,25 +213,24 @@ var processingHandler = function (processing) {
     return false;
   };
 
+  processing.mouseClicked = function () {
+    socket.send(JSON.stringify({command: "mouseClick", x: this.mouseX, y: this.mouseY}));
+  };
+
   var switchToSlide = function(slide) {
-    console.log("Slide :", slide);
     currentSlide = findSlideIndex(slide);
-    console.log("currentSlide :", currentSlide);
     slides[currentSlide].init();
 
     if(previousSlide !== null) {
-      console.log("inTransition");
       inTransition = true;
       transitionLifetime = 30;
     } else {
-      console.log("Saving previous slide", currentSlide);
       previousSlide = currentSlide
     }
   };
 
   $(window).on('hashchange', function (event) {
     var nextSlide = event.getState('slide');
-    console.log('hashchange:', nextSlide);
     switchToSlide(nextSlide);
   });
 
@@ -238,5 +241,5 @@ var processingHandler = function (processing) {
 
 $(function () {
   var canvas = $('canvas')[0];
-  var processing = new Processing(canvas, processingHandler);
+  var processing = new Processing(canvas, processingHandler); 
 });
