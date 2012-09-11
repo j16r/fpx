@@ -1,4 +1,4 @@
-(ns main
+(ns server
   (:use aleph.http
         compojure.core
         lamina.core)
