@@ -3,7 +3,7 @@ var socket = null;
 
 var processingHandler = function (processing) {
   var slides = [];
-  var currentSlide = 0;
+  var currentSlide = null;
   var slidesByName = {
     intro: 0,
     quote: 1,
@@ -131,12 +131,7 @@ var processingHandler = function (processing) {
   };
 
   var setInitialSlide = function () {
-    var params = $.deparam.querystring();
-    if(params.slide) {
-      switchToSlide(params.slide);
-    } else {
-      switchToSlide('intro');
-    }
+    $(window).trigger('hashchange');
   };
 
   var clear = function () {
@@ -146,7 +141,7 @@ var processingHandler = function (processing) {
   processing.setup = function () {
     loadFonts();
     createSlides();
-    fitToWindow(); 
+    fitToWindow();
     setInitialSlide();
 
     socket = new WebSocket("ws://" + location.host);
@@ -171,16 +166,17 @@ var processingHandler = function (processing) {
 
     var slide = slides[currentSlide];
     if(inTransition && slide.inTransition) {
-      var oldSlide = slides[previousSlide]
-      if(oldSlide.outTransition) {
-        oldSlide.outTransition();
+      if(previousSlide !== null) {
+        var oldSlide = slides[previousSlide]
+        if(oldSlide.outTransition) {
+          oldSlide.outTransition();
+        }
       }
 
       slide.inTransition();
 
       if(transitionLifetime-- == 0) {
         inTransition = false;
-        previousSlide = currentSlide
       }
     } else {
       slide.draw();
@@ -218,15 +214,13 @@ var processingHandler = function (processing) {
   };
 
   var switchToSlide = function(slide) {
+    previousSlide = currentSlide;
+
     currentSlide = findSlideIndex(slide);
     slides[currentSlide].init();
 
-    if(previousSlide !== null) {
-      inTransition = true;
-      transitionLifetime = 30;
-    } else {
-      previousSlide = currentSlide
-    }
+    inTransition = true;
+    transitionLifetime = 30;
   };
 
   $(window).on('hashchange', function (event) {
@@ -241,5 +235,5 @@ var processingHandler = function (processing) {
 
 $(function () {
   var canvas = $('canvas')[0];
-  var processing = new Processing(canvas, processingHandler); 
+  var processing = new Processing(canvas, processingHandler);
 });
