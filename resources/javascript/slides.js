@@ -42,14 +42,23 @@ var processingHandler = function (processing) {
         this.animations = [];
         this.basePosition = 0;
         this.speed = 2;
+        this.background = processing.color(159, 189, 225);
       },
-      addRainDrop: function () {
+      click: function (command) {
+        this.addRainDrop(command.x, command.y);
+      },
+      addRandomRainDrop: function () {
+        var x = Math.random() * $window.innerWidth(),
+            y = Math.random() * $window.innerHeight();
+        this.addRainDrop(x, y);
+      },
+      addRainDrop: function (x, y) {
         this.animations.push({
           lifetime: Math.random() * 100,
           radius: Math.random() * 100,
           color: [169, 199, 235, 220],
-          x: Math.random() * $window.innerWidth(),
-          y: Math.random() * $window.innerHeight()});
+          x: x,
+          y: y});
       },
       render: function () {
         this.animations = $.map(this.animations, function (animation, index) {
@@ -78,7 +87,7 @@ var processingHandler = function (processing) {
         processing.text("fp(x)", this.basePosition + $window.innerWidth() / 3, $window.innerHeight() / 1.1);
       },
       draw: function () {
-        this.addRainDrop();
+        this.addRandomRainDrop();
         this.render();
       },
       outTransition: function () {
@@ -98,8 +107,91 @@ var processingHandler = function (processing) {
       init: function () {
         this.alpha = 0;
         this.animations = [];
+        this.background = processing.color(0x85, 0xB5, 0x84);
+        this.maxAnimations = 100;
+      },
+      addRandomLeaf: function (x, y) {
+        var x = Math.random() * $window.innerWidth(),
+            y = Math.random() * $window.innerHeight();
+        this.addLeaf(x, y);
+      },
+      addLeaf: function (x, y) {
+        if(this.animations.size < this.maxAnimations) {
+          return;
+        }
+        this.animations.push({
+          color: [0x41, 0x92 + Math.random() * 90, 0x4b, 90],
+          x_velocity: Math.random(),
+          y_velocity: Math.random(),
+          direction: Math.random() * Math.PI * 2,
+          rotation: Math.random() * Math.PI * 2,
+          rotation_velocity: Math.random() / 20,
+          x: x,
+          y: y});
+      },
+      click: function (command) {
+        this.addLeaf(command.x, command.y);
+      },
+      wind: {
+        speed: 0,
+        direction: 0,
+        speedDelta: 0,
+        directionDelta: 0,
+        rotateOverlap: 0,
+        changeCountdown: 0,
       },
       render: function () {
+
+        this.wind.changeCountdown--;
+        this.wind.direction += this.wind.directionDelta;
+        this.wind.speed += this.wind.speedDelta;
+
+        if(this.wind.changeCountdown <= 0) {
+          var newSpeed = Math.random() * 8,
+              newDirection = Math.random() * Math.PI * 2;
+
+          this.wind.changeCountdown = Math.random() * 500;
+          this.wind.speedDelta = (newSpeed - this.wind.speed) / this.wind.changeCountdown;
+          this.wind.directionDelta = (newDirection - this.wind.direction) / this.wind.changeCountdown;
+          console.log("Wind change: ", this.wind);
+        }
+
+        var windXVelocity, windYVelocity;
+        windXVelocity = processing.cos(this.wind.direction) * this.wind.speed;
+        windYVelocity = processing.sin(this.wind.direction) * this.wind.speed;
+
+        this.animations = $.map(this.animations, function (animation, index) {
+          animation.x += windXVelocity + animation.x_velocity;
+          animation.y += windYVelocity + animation.y_velocity;
+          animation.rotation += animation.rotation_velocity;
+
+          if(animation.x > $window.innerWidth() + 100) {
+            animation.x = -10;
+            animation.y = Math.random() * $window.innerHeight();
+          } else if(animation.x < -100) {
+            animation.x = $window.innerWidth() + 10;
+            animation.y = Math.random() * $window.innerHeight();
+          } else if(animation.y > $window.innerHeight() + 100) {
+            animation.y = -10;
+            animation.x = Math.random() * $window.innerWidth();
+          } else if(animation.y < -100) {
+            animation.y = $window.innerHeight() + 10;
+            animation.x = Math.random() * $window.innerWidth();
+          }
+
+          processing.resetMatrix();
+          processing.translate(animation.x, animation.y);
+          processing.rotate(animation.rotation);
+
+          processing.noStroke();
+          processing.fill(animation.color[0], animation.color[1], animation.color[2], animation.color[3]);
+          //processing.bezier(0, 0, 10, 10, 90, 90, 100, 100);
+          processing.ellipse(0, 0, 50, 20);
+
+          return animation;
+        });
+
+        processing.resetMatrix();
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge)
         processing.textAlign(processing.PConstants.CENTER);
@@ -111,11 +203,17 @@ var processingHandler = function (processing) {
         this.render();
       },
       outTransition: function () {
-        this.alpha -= 8;
+        this.alpha -= 32;
+        for(var i = 0; i < 5; ++i) {
+          this.animations.pop();
+        }
         this.render();
       },
       inTransition: function () {
         this.alpha += 8;
+        for(var i = 0; i < 5; ++i) {
+          this.addRandomLeaf();
+        }
         this.render();
       }};
 
@@ -134,8 +232,8 @@ var processingHandler = function (processing) {
     $(window).trigger('hashchange');
   };
 
-  var clear = function () {
-    processing.background(processing.color(159, 189, 225));
+  var clear = function (slide, previousSlide) {
+    processing.background(slide.background);
   };
 
   processing.setup = function () {
@@ -151,21 +249,18 @@ var processingHandler = function (processing) {
 
       if(command.command === "mouseClick") {
         var slide = slides[currentSlide];
-        slide.animations.push({
-          color: [169, 230, 235, 220],
-          lifetime: Math.random() * 100,
-          radius: Math.random() * 100,
-          x: command.x,
-          y: command.y});
+        if(slide.click) {
+          slide.click.call(slide, command);
+        }
       }
     };
   };
 
   processing.draw = function() {
-    clear();
-
     var slide = slides[currentSlide];
     if(inTransition && slide.inTransition) {
+      clear(slide, previousSlide);
+
       if(previousSlide !== null) {
         var oldSlide = slides[previousSlide]
         if(oldSlide.outTransition) {
@@ -179,6 +274,7 @@ var processingHandler = function (processing) {
         inTransition = false;
       }
     } else {
+      clear(slide);
       slide.draw();
     }
   };
