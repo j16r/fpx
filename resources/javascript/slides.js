@@ -1,19 +1,21 @@
 var $window = $(window);
 var socket = null;
+var slides = [];
+var currentSlide = null;
+var slidesByName = {
+  intro: 0,
+  quote: 1,
+  presenter: 2,
+  credits: 3
+};
+var inTransition = false;
+var previousSlide = null;
+var transitionLifetime = 0;
+var fonts = {};
+var images = {};
+var width, height;
 
 var processingHandler = function (processing) {
-  var slides = [];
-  var currentSlide = null;
-  var slidesByName = {
-    intro: 0,
-    quote: 1,
-    presenter: 2,
-    credits: 3
-  };
-  var inTransition = false;
-  var previousSlide = null;
-  var transitionLifetime = 0;
-  var fonts = {};
 
   var findSlideIndex = function (name) {
     return slidesByName[name] || 0;
@@ -31,7 +33,9 @@ var processingHandler = function (processing) {
   };
 
   var fitToWindow = function () {
-    processing.size($window.innerWidth(), $window.innerHeight());
+    width = $window.innerWidth();
+    height = $window.innerHeight();
+    processing.size(width, height);
   };
 
   var createSlides = function () {
@@ -48,8 +52,8 @@ var processingHandler = function (processing) {
         this.addRainDrop(command.x, command.y);
       },
       addRandomRainDrop: function () {
-        var x = Math.random() * $window.innerWidth(),
-            y = Math.random() * $window.innerHeight();
+        var x = Math.random() * width,
+            y = Math.random() * height;
         this.addRainDrop(x, y);
       },
       addRainDrop: function (x, y) {
@@ -84,7 +88,7 @@ var processingHandler = function (processing) {
 
         processing.fill(0, 0, 0, 20);
         processing.textSize(412);
-        processing.text("fp(x)", this.basePosition + $window.innerWidth() / 3, $window.innerHeight() / 1.1);
+        processing.text("fp(x)", this.basePosition + width / 3, height / 1.1);
       },
       draw: function () {
         this.addRandomRainDrop();
@@ -108,19 +112,39 @@ var processingHandler = function (processing) {
         this.alpha = 0;
         this.animations = [];
         this.background = processing.color(0x85, 0xB5, 0x84);
-        this.maxAnimations = 100;
+        this.maxAnimations = 200;
       },
       addRandomLeaf: function (x, y) {
-        var x = Math.random() * $window.innerWidth(),
-            y = Math.random() * $window.innerHeight();
+        var x, y;
+        switch(Math.floor(Math.random() * 4)) {
+          case 0:
+            x = -100;
+            y = Math.random() * height;
+            break;
+          case 1:
+            x = width + 100;
+            y = Math.random() * height;
+            break;
+          case 2:
+            x = Math.random() * width;
+            y = -100;
+            break;
+          case 3:
+            x = Math.random() * width;
+            y = height + 100;
+            break;
+        };
         this.addLeaf(x, y);
       },
-      addLeaf: function (x, y) {
-        if(this.animations.size < this.maxAnimations) {
+      randomLeaf: function () {
+        return images.leaves[Math.floor(Math.random() * images.leaves.length)];
+      },
+      addLeaf: function (x, y, shape) {
+        if(this.animations.length > this.maxAnimations) {
           return;
         }
         this.animations.push({
-          color: [0x41, 0x92 + Math.random() * 90, 0x4b, 90],
+          shape: shape || this.randomLeaf(),
           x_velocity: Math.random(),
           y_velocity: Math.random(),
           direction: Math.random() * Math.PI * 2,
@@ -129,8 +153,13 @@ var processingHandler = function (processing) {
           x: x,
           y: y});
       },
+
       click: function (command) {
-        this.addLeaf(command.x, command.y);
+        var shape = null;
+        if (Math.random() > 0.9) {
+          shape = images.piggy;
+        }
+        this.addLeaf(command.x, command.y, shape);
       },
       wind: {
         speed: 0,
@@ -141,6 +170,9 @@ var processingHandler = function (processing) {
         changeCountdown: 0,
       },
       render: function () {
+        if(this.animations.length < 20) {
+          this.addRandomLeaf();
+        }
 
         this.wind.changeCountdown--;
         this.wind.direction += this.wind.directionDelta;
@@ -153,30 +185,25 @@ var processingHandler = function (processing) {
           this.wind.changeCountdown = Math.random() * 500;
           this.wind.speedDelta = (newSpeed - this.wind.speed) / this.wind.changeCountdown;
           this.wind.directionDelta = (newDirection - this.wind.direction) / this.wind.changeCountdown;
-          console.log("Wind change: ", this.wind);
         }
 
         var windXVelocity, windYVelocity;
         windXVelocity = processing.cos(this.wind.direction) * this.wind.speed;
         windYVelocity = processing.sin(this.wind.direction) * this.wind.speed;
 
-        this.animations = $.map(this.animations, function (animation, index) {
+        this.animations = _.compact($.map(this.animations, function (animation, index) {
           animation.x += windXVelocity + animation.x_velocity;
           animation.y += windYVelocity + animation.y_velocity;
           animation.rotation += animation.rotation_velocity;
 
-          if(animation.x > $window.innerWidth() + 100) {
-            animation.x = -10;
-            animation.y = Math.random() * $window.innerHeight();
+          if(animation.x > width + 100) {
+            return null;
           } else if(animation.x < -100) {
-            animation.x = $window.innerWidth() + 10;
-            animation.y = Math.random() * $window.innerHeight();
-          } else if(animation.y > $window.innerHeight() + 100) {
-            animation.y = -10;
-            animation.x = Math.random() * $window.innerWidth();
+            return null;
+          } else if(animation.y > height + 100) {
+            return null;
           } else if(animation.y < -100) {
-            animation.y = $window.innerHeight() + 10;
-            animation.x = Math.random() * $window.innerWidth();
+            return null;
           }
 
           processing.resetMatrix();
@@ -184,20 +211,18 @@ var processingHandler = function (processing) {
           processing.rotate(animation.rotation);
 
           processing.noStroke();
-          processing.fill(animation.color[0], animation.color[1], animation.color[2], animation.color[3]);
-          //processing.bezier(0, 0, 10, 10, 90, 90, 100, 100);
-          processing.ellipse(0, 0, 50, 20);
+          processing.shape(animation.shape, 0, 0, 500, 500);
 
           return animation;
-        });
+        }));
 
         processing.resetMatrix();
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge)
         processing.textAlign(processing.PConstants.CENTER);
-        processing.text("PowerPoint is just simulated acetate overhead slides, and to me,\nthat is a kind of a moral crime", $window.innerWidth() / 2, $window.innerHeight() / 2);
+        processing.text("PowerPoint is just simulated acetate overhead slides, and to me,\nthat is a kind of a moral crime", width / 2, height / 2);
         processing.textFont(fonts.quicksand)
-        processing.text("-- Alan Kay", $window.innerWidth() / 1.8, $window.innerHeight() / 1.5);
+        processing.text("-- Alan Kay", width / 1.8, height / 1.5);
       },
       draw: function () {
         this.render();
@@ -211,9 +236,6 @@ var processingHandler = function (processing) {
       },
       inTransition: function () {
         this.alpha += 8;
-        for(var i = 0; i < 5; ++i) {
-          this.addRandomLeaf();
-        }
         this.render();
       }};
 
@@ -228,6 +250,15 @@ var processingHandler = function (processing) {
     fonts.quicksand = processing.createFont("Quicksand", 24);
   };
 
+  var loadImages = function () {
+    images.piggy = processing.loadShape("/images/piggy.svg");
+    images.leaves = [];
+    images.leaves[0] = processing.loadShape("/images/leaf0.svg");
+    images.leaves[1] = processing.loadShape("/images/leaf1.svg");
+    images.leaves[2] = processing.loadShape("/images/leaf2.svg");
+    images.leaves[3] = processing.loadShape("/images/leaf3.svg");
+  };
+
   var setInitialSlide = function () {
     $(window).trigger('hashchange');
   };
@@ -238,6 +269,7 @@ var processingHandler = function (processing) {
 
   processing.setup = function () {
     loadFonts();
+    loadImages();
     createSlides();
     fitToWindow();
     setInitialSlide();
