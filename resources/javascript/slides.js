@@ -38,6 +38,11 @@ var processingHandler = function (processing) {
     processing.size(width, height);
   };
 
+  var random = function (from, to) {
+    var end = to || 0;
+    return (Math.random() * (from - -end)) - end;
+  };
+
   var createSlides = function () {
     var slide = {
       animations: null,
@@ -52,14 +57,13 @@ var processingHandler = function (processing) {
         this.addRainDrop(command.x, command.y);
       },
       addRandomRainDrop: function () {
-        var x = Math.random() * width,
-            y = Math.random() * height;
+        var x = random(width), y = random(height);
         this.addRainDrop(x, y);
       },
       addRainDrop: function (x, y) {
         this.animations.push({
-          lifetime: Math.random() * 100,
-          radius: Math.random() * 100,
+          lifetime: random(100),
+          radius: random(100),
           color: [169, 199, 235, 220],
           x: x,
           y: y});
@@ -116,28 +120,28 @@ var processingHandler = function (processing) {
       },
       addRandomLeaf: function (x, y) {
         var x, y;
-        switch(Math.floor(Math.random() * 4)) {
+        switch(Math.floor(random(4))) {
           case 0:
             x = -100;
-            y = Math.random() * height;
+            y = random(height);
             break;
           case 1:
             x = width + 100;
-            y = Math.random() * height;
+            y = random(height);
             break;
           case 2:
-            x = Math.random() * width;
+            x = random(width);
             y = -100;
             break;
           case 3:
-            x = Math.random() * width;
+            x = random(width);
             y = height + 100;
             break;
         };
         this.addLeaf(x, y);
       },
       randomLeaf: function () {
-        return images.leaves[Math.floor(Math.random() * images.leaves.length)];
+        return images.leaves[Math.floor(random(images.leaves.length))];
       },
       addLeaf: function (x, y, shape) {
         if(this.animations.length > this.maxAnimations) {
@@ -147,8 +151,8 @@ var processingHandler = function (processing) {
           shape: shape || this.randomLeaf(),
           x_velocity: Math.random(),
           y_velocity: Math.random(),
-          direction: Math.random() * Math.PI * 2,
-          rotation: Math.random() * Math.PI * 2,
+          direction: random(Math.PI * 2),
+          rotation: random(Math.PI * 2),
           rotation_velocity: Math.random() / 20,
           x: x,
           y: y});
@@ -179,10 +183,10 @@ var processingHandler = function (processing) {
         this.wind.speed += this.wind.speedDelta;
 
         if(this.wind.changeCountdown <= 0) {
-          var newSpeed = Math.random() * 8,
-              newDirection = Math.random() * Math.PI * 2;
+          var newSpeed = random(8),
+              newDirection = random(-Math.PI, Math.PI);
 
-          this.wind.changeCountdown = Math.random() * 500;
+          this.wind.changeCountdown = random(500);
           this.wind.speedDelta = (newSpeed - this.wind.speed) / this.wind.changeCountdown;
           this.wind.directionDelta = (newDirection - this.wind.direction) / this.wind.changeCountdown;
         }
@@ -211,7 +215,7 @@ var processingHandler = function (processing) {
           processing.rotate(animation.rotation);
 
           processing.noStroke();
-          processing.shape(animation.shape, 0, 0, 500, 500);
+          processing.shape(animation.shape, 0, 0, 80, 80);
 
           return animation;
         }));
@@ -220,18 +224,16 @@ var processingHandler = function (processing) {
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge)
         processing.textAlign(processing.PConstants.CENTER);
-        processing.text("PowerPoint is just simulated acetate overhead slides, and to me,\nthat is a kind of a moral crime", width / 2, height / 2);
+        processing.text("PowerPoint is just simulated acetate overhead slides, and to me,\nthat is a kind of a moral crime", 0, height / 2, width, height);
         processing.textFont(fonts.quicksand)
-        processing.text("-- Alan Kay", width / 1.8, height / 1.5);
+        processing.text("-- Alan Kay", 0, height / 1.5, width, height);
       },
       draw: function () {
         this.render();
       },
       outTransition: function () {
         this.alpha -= 32;
-        for(var i = 0; i < 5; ++i) {
-          this.animations.pop();
-        }
+        this.animations.pop();
         this.render();
       },
       inTransition: function () {
@@ -273,6 +275,8 @@ var processingHandler = function (processing) {
     createSlides();
     fitToWindow();
     setInitialSlide();
+
+    processing.shapeMode(processing.PConstants.CENTER);
 
     socket = new WebSocket("ws://" + location.host);
 
