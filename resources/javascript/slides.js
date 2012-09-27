@@ -54,17 +54,17 @@ var processingHandler = function (processing) {
         this.background = processing.color(159, 189, 225);
       },
       click: function (command) {
-        this.addRainDrop(command.x, command.y);
+        this.addRainDrop(command.x, command.y, [169, 239, 235, 220]);
       },
       addRandomRainDrop: function () {
         var x = random(width), y = random(height);
         this.addRainDrop(x, y);
       },
-      addRainDrop: function (x, y) {
+      addRainDrop: function (x, y, color) {
         this.animations.push({
           lifetime: random(100),
           radius: random(100),
-          color: [169, 199, 235, 220],
+          color: color || [169, 199, 235, 220],
           x: x,
           y: y});
       },
