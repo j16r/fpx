@@ -13,7 +13,15 @@ var previousSlide = null;
 var transitionLifetime = 0;
 var fonts = {};
 var images = {};
-var width, height;
+var width = 0, height = 0;
+
+var randomRange = function (from, to) {
+  return (Math.random() * (to - from)) - to;
+};
+
+var random = function (to) {
+  return Math.random() * (to || 1);
+};
 
 var processingHandler = function (processing) {
 
@@ -36,11 +44,6 @@ var processingHandler = function (processing) {
     width = $window.innerWidth();
     height = $window.innerHeight();
     processing.size(width, height);
-  };
-
-  var random = function (from, to) {
-    var end = to || 0;
-    return (Math.random() * (from - -end)) - end;
   };
 
   var createSlides = function () {
@@ -81,8 +84,8 @@ var processingHandler = function (processing) {
           return animation;
         });
 
-        processing.textFont("Helvetica");
         processing.fill(0);
+        processing.textFont("Helvetica");
         processing.textAlign(processing.PConstants.LEFT);
         processing.textSize(36);
         processing.text("PLAY >>>>", this.basePosition + 100, 350);
@@ -184,7 +187,7 @@ var processingHandler = function (processing) {
 
         if(this.wind.changeCountdown <= 0) {
           var newSpeed = random(8),
-              newDirection = random(-Math.PI, Math.PI);
+              newDirection = randomRange(-Math.PI, Math.PI);
 
           this.wind.changeCountdown = random(500);
           this.wind.speedDelta = (newSpeed - this.wind.speed) / this.wind.changeCountdown;
@@ -200,13 +203,10 @@ var processingHandler = function (processing) {
           animation.y += windYVelocity + animation.y_velocity;
           animation.rotation += animation.rotation_velocity;
 
-          if(animation.x > width + 100) {
-            return null;
-          } else if(animation.x < -100) {
-            return null;
-          } else if(animation.y > height + 100) {
-            return null;
-          } else if(animation.y < -100) {
+          if(animation.x > width + 100 ||
+              animation.x < -100 ||
+              animation.y > height + 100 ||
+              animation.y < -100) {
             return null;
           }
 
@@ -223,10 +223,9 @@ var processingHandler = function (processing) {
         processing.resetMatrix();
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge)
+        processing.textSize(54);
         processing.textAlign(processing.PConstants.CENTER);
-        processing.text("PowerPoint is just simulated acetate overhead slides, and to me,\nthat is a kind of a moral crime", 0, height / 2, width, height);
-        processing.textFont(fonts.quicksand)
-        processing.text("-- Alan Kay", 0, height / 1.5, width, height);
+        processing.text("PowerPoint is just simulated acetate overhead slides, and to me, that is a kind of a moral crime\n\n-- Alan Kay", 100, height / 2, width - 300, height);
       },
       draw: function () {
         this.render();
@@ -244,12 +243,72 @@ var processingHandler = function (processing) {
     slides.push(slide);
 
     slide = {
-    };
+      init: function () {
+        this.background = processing.color(255, 255, 255);
+        this.animations = null;
+      },
+      jaggedText: function(string, x, y) {
+        for(var i = 0; i < 5; ++i) {
+          processing.resetMatrix();
+          processing.textSize(126);
+          processing.fill(0, 0, 0, random(90));
+          processing.translate(-200 + random(10), -200 + random(10));
+          processing.rotate(randomRange(-0.006, 0.006));
+          processing.translate(x + 400 + random(10), y + 200 + random(10));
+          processing.text(string, 0, 0);
+        }
+      },
+      rightEdgedText: function(string, y) {
+        var textWidth = processing.textWidth(string);
+        processing.text(string, width - textWidth, y); 
+      },
+      draw: function () {
+        processing.fill(0, 0, 0);
+        processing.textFont(fonts.douar)
+        processing.textSize(128);
+        this.rightEdgedText("John Barker", height - 110);
+        this.rightEdgedText("Pivotal Labs", height - 10);
+
+        if(this.animations == null || this.animations.length > 100) {
+          this.animations = [[random(width), random(height)]];
+        }
+
+        var distance = random(20),
+            quadrant = random();
+
+        if(quadrant > 0.25) {
+          randX = randY = distance;
+        } else if(quadrant > 0.5) {
+          randX = randY = -distance;
+        } else if(quadrant > 0.75) {
+          randX = -distance;
+          randY = distance;
+        } else {
+          randX = distance;
+          randY = -distance;
+        }
+        var lastAnimation = this.animations[this.animations.length - 1];
+        randX += lastAnimation[0];
+        randY += lastAnimation[1];
+        this.animations.push([randX, randY]);
+
+        processing.resetMatrix();
+        processing.stroke(0, 0, 0, 10);
+        var oldX = lastAnimation[0], oldY = lastAnimation[1];
+        _.each(this.animations, function (animation, index) {
+          processing.line(oldX, oldY, animation[0], animation[1]);
+          oldX = animation[0];
+          oldY = animation[1];
+        }, this);
+      }};
+
+    slides.push(slide);
   };
 
   var loadFonts = function () {
     fonts.quicksandLarge = processing.createFont("Quicksand", 36);
     fonts.quicksand = processing.createFont("Quicksand", 24);
+    fonts.douar = processing.createFont("Douar", 24);
   };
 
   var loadImages = function () {
@@ -266,7 +325,9 @@ var processingHandler = function (processing) {
   };
 
   var clear = function (slide, previousSlide) {
-    processing.background(slide.background);
+    if(slide.background) {
+      processing.background(slide.background);
+    }
   };
 
   processing.setup = function () {

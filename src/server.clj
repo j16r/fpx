@@ -28,7 +28,7 @@
 
 (defroutes app-routes
   (GET ["/"] {} (wrap-aleph-handler render))
-  (route/files "/" {:root (str pwd "/resources")})
+  (route/resources "/")
   (route/not-found "Page not found"))
 
 (defn -main [& args]
