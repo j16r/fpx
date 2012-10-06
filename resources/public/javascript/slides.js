@@ -55,10 +55,10 @@ var processingHandler = function (processing) {
         processing.textFont('Helvetica');
         processing.text('fp(x)', this.basePosition + width / 3, height / 1.1);
 
-        for(var index = 0; index < this.animations.length; ++index) {
+        for(var index = 0; index < this.animations.length; index++) {
           var animation = this.animations[index];
 
-          --animation.lifetime;
+          animation.lifetime--;
           if(animation.lifetime <= 0) {
             this.animations[index] = this.randomRainDrop();
           }
@@ -160,7 +160,7 @@ var processingHandler = function (processing) {
           this.addRandomLeaf();
         }
 
-        --this.wind.changeCountdown;
+        this.wind.changeCountdown--;
         this.wind.direction += this.wind.directionDelta;
         this.wind.speed += this.wind.speedDelta;
 
@@ -177,7 +177,7 @@ var processingHandler = function (processing) {
         windXVelocity = processing.cos(this.wind.direction) * this.wind.speed;
         windYVelocity = processing.sin(this.wind.direction) * this.wind.speed;
 
-        for(var index = 0; index < this.animations.length; ++index) {
+        for(var index = 0; index < this.animations.length; index++) {
           var animation = this.animations[index];
 
           animation.x += windXVelocity + animation.xVelocity;
@@ -189,7 +189,7 @@ var processingHandler = function (processing) {
               animation.y > height + offset ||
               animation.y < -offset) {
             this.animations.splice(index, 1);
-            --index;
+            index--;
             continue;
           }
 
@@ -231,7 +231,7 @@ var processingHandler = function (processing) {
         this.animations = null;
       },
       jaggedText: function(string, x, y) {
-        for(var i = 0; i < 5; ++i) {
+        for(var i = 0; i < 5; i++) {
           processing.resetMatrix();
           processing.textSize(126);
           processing.fill(0, 0, 0, processing.random(90));
@@ -354,7 +354,7 @@ var processingHandler = function (processing) {
 
       slide.inTransition();
 
-      --transitionLifetime;
+      transitionLifetime--;
       if(transitionLifetime === 0) {
         inTransition = false;
       }
