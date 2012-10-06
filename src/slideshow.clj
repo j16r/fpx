@@ -8,7 +8,7 @@
       [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1, maximum-scale=1"}]
       (include-js "//cdnjs.cloudflare.com/ajax/libs/jquery/1.8.2/jquery.min.js")
-      (include-js "/javascript/jquery.ba-bbq.min.js")
+      (include-js "//cachedcommons.org/cache/jquery-bbq/1.2.1/javascripts/jquery-bbq.js")
       (include-js "//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.1/underscore-min.js")
       (include-js "//cdnjs.cloudflare.com/ajax/libs/processing.js/1.3.6/processing-api.min.js")
       (include-js "/javascript/web_socket.js")
