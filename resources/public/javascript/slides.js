@@ -14,14 +14,6 @@ var fonts = {};
 var images = {};
 var width = 0, height = 0;
 
-var randomRange = function (from, to) {
-  return (Math.random() * (to - from)) - to;
-};
-
-var random = function (to) {
-  return Math.random() * (to || 1);
-};
-
 var processingHandler = function (processing) {
 
   var fitToWindow = function () {
@@ -44,20 +36,23 @@ var processingHandler = function (processing) {
         this.animations.push(this.rainDrop(command.x, command.y, [169, 239, 235, 220]));
       },
       randomRainDrop: function () {
-        var x = random(width), y = random(height);
+        var x = processing.random(width), y = processing.random(height);
         return this.rainDrop(x, y);
       },
       rainDrop: function (x, y, color) {
         return {
-          lifetime: random(100),
-          radius: random(100),
+          lifetime: processing.random(100),
+          radius: processing.random(100),
           color: color || [169, 199, 235, 220],
           x: x,
           y: y};
       },
       render: function () {
+        processing.resetMatrix();
+        processing.textAlign(processing.PConstants.LEFT);
         processing.fill(0, 0, 0, 20);
         processing.textSize(412);
+        processing.textFont('Helvetica');
         processing.text('fp(x)', this.basePosition + width / 3, height / 1.1);
 
         for(var index = 0; index < this.animations.length; ++index) {
@@ -74,8 +69,6 @@ var processingHandler = function (processing) {
         };
 
         processing.fill(0);
-        processing.textAlign(processing.PConstants.LEFT);
-        processing.textFont('Helvetica');
         processing.textSize(36);
         processing.text('PLAY >>>>', this.basePosition + 100, 350);
 
@@ -110,28 +103,28 @@ var processingHandler = function (processing) {
       addRandomLeaf: function () {
         var x, y;
         var offset = this.leafRadius;
-        switch(Math.floor(random(4))) {
+        switch(processing.floor(processing.random(4))) {
           case 0:
             x = -offset;
-            y = random(height);
+            y = processing.random(height);
             break;
           case 1:
             x = width + offset;
-            y = random(height);
+            y = processing.random(height);
             break;
           case 2:
-            x = random(width);
+            x = processing.random(width);
             y = -offset;
             break;
           default:
-            x = random(width);
+            x = processing.random(width);
             y = height + offset;
             break;
         }
         this.addLeaf(x, y);
       },
       randomLeaf: function () {
-        return images.leaves[Math.floor(random(images.leaves.length))];
+        return images.leaves[processing.floor(processing.random(images.leaves.length))];
       },
       addLeaf: function (x, y, shape) {
         if(this.animations.length > this.maxAnimations) {
@@ -139,17 +132,17 @@ var processingHandler = function (processing) {
         }
         this.animations.push({
           shape: shape || this.randomLeaf(),
-          xVelocity: Math.random(),
-          yVelocity: Math.random(),
-          direction: random(Math.PI * 2),
-          rotation: random(Math.PI * 2),
-          rotationVelocity: Math.random() / 20,
+          xVelocity: processing.random(),
+          yVelocity: processing.random(),
+          direction: processing.random(processing.PI * 2),
+          rotation: processing.random(processing.PI * 2),
+          rotationVelocity: processing.random() / 20,
           x: x,
           y: y});
       },
       click: function (command) {
         var shape = null;
-        if (Math.random() > 0.9) {
+        if (processing.random() > 0.9) {
           shape = images.piggy;
         }
         this.addLeaf(command.x, command.y, shape);
@@ -172,10 +165,10 @@ var processingHandler = function (processing) {
         this.wind.speed += this.wind.speedDelta;
 
         if(this.wind.changeCountdown <= 0) {
-          var newSpeed = random(8),
-              newDirection = randomRange(-Math.PI, Math.PI);
+          var newSpeed = processing.random(8),
+              newDirection = processing.random(-processing.PI, processing.PI);
 
-          this.wind.changeCountdown = random(500);
+          this.wind.changeCountdown = processing.random(500);
           this.wind.speedDelta = (newSpeed - this.wind.speed) / this.wind.changeCountdown;
           this.wind.directionDelta = (newDirection - this.wind.direction) / this.wind.changeCountdown;
         }
@@ -213,9 +206,9 @@ var processingHandler = function (processing) {
         processing.resetMatrix();
         processing.fill(0, 0, 0, this.alpha);
         processing.textFont(fonts.quicksandLarge);
+        processing.textAlign(processing.PConstants.LEFT);
         processing.textSize(54);
-        processing.textAlign(processing.PConstants.CENTER);
-        processing.text('PowerPoint is just simulated acetate overhead slides, and to me, that is a kind of a moral crime\n\n-- Alan Kay', 100, height / 2, width - 300, height);
+        processing.text('PowerPoint is just simulated acetate overhead slides, and to me, that is a kind of a moral crime.\n\n-- Alan Kay', width * 0.1, height * 0.2, width - (width * 0.2), height);
       },
       draw: function () {
         this.render();
@@ -241,10 +234,10 @@ var processingHandler = function (processing) {
         for(var i = 0; i < 5; ++i) {
           processing.resetMatrix();
           processing.textSize(126);
-          processing.fill(0, 0, 0, random(90));
-          processing.translate(-200 + random(10), -200 + random(10));
-          processing.rotate(randomRange(-0.006, 0.006));
-          processing.translate(x + 400 + random(10), y + 200 + random(10));
+          processing.fill(0, 0, 0, processing.random(90));
+          processing.translate(-200 + processing.random(10), -200 + processing.random(10));
+          processing.rotate(processing.random(-0.006, 0.006));
+          processing.translate(x + 400 + processing.random(10), y + 200 + processing.random(10));
           processing.text(string, 0, 0);
         }
       },
@@ -260,11 +253,11 @@ var processingHandler = function (processing) {
         this.rightEdgedText('Pivotal Labs', height - 10);
 
         if(this.animations === null || this.animations.length > 100) {
-          this.animations = [[random(width), random(height)]];
+          this.animations = [[processing.random(width), processing.random(height)]];
         }
 
-        var distance = random(20),
-            quadrant = random();
+        var distance = processing.random(20),
+            quadrant = processing.random();
 
         if(quadrant > 0.25) {
           randX = randY = distance;
@@ -311,7 +304,7 @@ var processingHandler = function (processing) {
   };
 
   var setInitialSlide = function () {
-    $(window).trigger('hashchange');
+    $window.trigger('hashchange');
   };
 
   var clear = function (slide, previousSlide) {
@@ -411,12 +404,12 @@ var processingHandler = function (processing) {
     transitionLifetime = 30;
   };
 
-  $(window).on('hashchange', function (event) {
+  $window.on('hashchange', function (event) {
     var nextSlide = event.getState('slide');
     switchToSlide(nextSlide || 'intro');
   });
 
-  $(window).on('resize', function () {
+  $window.on('resize', function () {
     fitToWindow();
   });
 };
