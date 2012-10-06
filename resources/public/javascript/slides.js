@@ -330,15 +330,7 @@ var processingHandler = function (processing) {
     }
   };
 
-  processing.setup = function () {
-    loadFonts();
-    loadImages();
-    createSlides();
-    fitToWindow();
-    setInitialSlide();
-
-    processing.shapeMode(processing.PConstants.CENTER);
-
+  var handleInteractions = function () {
     socket = new WebSocket("ws://" + location.host);
 
     socket.onmessage = function(message) {
@@ -351,6 +343,18 @@ var processingHandler = function (processing) {
         }
       }
     };
+  };
+
+  processing.setup = function () {
+    loadFonts();
+    loadImages();
+    createSlides();
+    fitToWindow();
+    setInitialSlide();
+    handleInteractions();
+
+    processing.frameRate(25);
+    processing.shapeMode(processing.PConstants.CENTER);
   };
 
   processing.draw = function() {
