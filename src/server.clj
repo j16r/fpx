@@ -2,7 +2,8 @@
   (:use aleph.http
         compojure.core
         lamina.core)
-  (:require [compojure.route :as route]))
+  (:require [compojure.route :as route]
+            [slideshow]))
 
 (defn on-create [channel]
   (receive-all channel #(println "message: " %)))
@@ -12,19 +13,15 @@
     (siphon commands response-channel)
     (siphon response-channel commands)))
 
-(def pwd (System/getProperty "user.dir"))
-
-(def page (slurp (str pwd "/resources/index.html")))
-
-(defn index-page [request]
+(defn main-page [request]
   {:status 200
-   :headers {"content-type" "text/html"}
-   :body page})
+   :headers {"Content-type" "text/html"}
+   :body slideshow/page})
 
 (defn render [response-channel request]
   (if (:websocket request)
     (command-handler response-channel)
-    (enqueue response-channel (index-page request))))
+    (enqueue response-channel (main-page request))))
 
 (defroutes app-routes
   (GET ["/"] {} (wrap-aleph-handler render))
