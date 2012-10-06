@@ -2,12 +2,11 @@ var $window = $(window);
 var socket = null;
 var slides = [];
 var currentSlide = null;
-var slidesByName = {
-  intro: 0,
-  quote: 1,
-  presenter: 2,
-  credits: 3
-};
+var slideNames = [
+  'intro',
+  'quote',
+  'presenter',
+  'credits'];
 var inTransition = false;
 var previousSlide = null;
 var transitionLifetime = 0;
@@ -24,21 +23,6 @@ var random = function (to) {
 };
 
 var processingHandler = function (processing) {
-
-  var findSlideIndex = function (name) {
-    return slidesByName[name] || 0;
-  };
-
-  var findSlideName = function (index) {
-    var slideName = null;
-    _.each(slidesByName, function (slide, name) {
-      if(slide == index) {
-        slideName = name;
-        return true;
-      }
-    });
-    return slideName;
-  };
 
   var fitToWindow = function () {
     width = $window.innerWidth();
@@ -57,48 +41,48 @@ var processingHandler = function (processing) {
         this.background = processing.color(159, 189, 225);
       },
       click: function (command) {
-        this.addRainDrop(command.x, command.y, [169, 239, 235, 220]);
+        this.animations.push(this.rainDrop(command.x, command.y, [169, 239, 235, 220]));
       },
-      addRandomRainDrop: function () {
+      randomRainDrop: function () {
         var x = random(width), y = random(height);
-        this.addRainDrop(x, y);
+        return this.rainDrop(x, y);
       },
-      addRainDrop: function (x, y, color) {
-        this.animations.push({
+      rainDrop: function (x, y, color) {
+        return {
           lifetime: random(100),
           radius: random(100),
           color: color || [169, 199, 235, 220],
           x: x,
-          y: y});
+          y: y};
       },
       render: function () {
-        this.animations = $.map(this.animations, function (animation, index) {
-          if(--animation.lifetime <= 0) {
-            return null;
+        processing.fill(0, 0, 0, 20);
+        processing.textSize(412);
+        processing.text('fp(x)', this.basePosition + width / 3, height / 1.1);
+
+        for(var index = 0; index < this.animations.length; ++index) {
+          var animation = this.animations[index];
+
+          --animation.lifetime;
+          if(animation.lifetime <= 0) {
+            this.animations[index] = this.randomRainDrop();
           }
 
           processing.noStroke();
           processing.fill(animation.color[0], animation.color[1], animation.color[2], animation.color[3]);
           processing.ellipse(animation.x, animation.y, animation.lifetime, animation.lifetime);
-
-          return animation;
-        });
+        };
 
         processing.fill(0);
-        processing.textFont("Helvetica");
         processing.textAlign(processing.PConstants.LEFT);
+        processing.textFont('Helvetica');
         processing.textSize(36);
-        processing.text("PLAY >>>>", this.basePosition + 100, 350);
+        processing.text('PLAY >>>>', this.basePosition + 100, 350);
 
         processing.textSize(112);
-        processing.text("fp(x)", this.basePosition + 100, 300);
-
-        processing.fill(0, 0, 0, 20);
-        processing.textSize(412);
-        processing.text("fp(x)", this.basePosition + width / 3, height / 1.1);
+        processing.text('fp(x)', this.basePosition + 100, 300);
       },
       draw: function () {
-        this.addRandomRainDrop();
         this.render();
       },
       outTransition: function () {
@@ -107,6 +91,7 @@ var processingHandler = function (processing) {
         this.render();
       },
       inTransition: function () {
+        this.animations.push(this.randomRainDrop());
         this.draw();
       }};
 
@@ -120,27 +105,29 @@ var processingHandler = function (processing) {
         this.animations = [];
         this.background = processing.color(0x85, 0xB5, 0x84);
         this.maxAnimations = 200;
+        this.leafRadius = 50;
       },
-      addRandomLeaf: function (x, y) {
+      addRandomLeaf: function () {
         var x, y;
+        var offset = this.leafRadius;
         switch(Math.floor(random(4))) {
           case 0:
-            x = -100;
+            x = -offset;
             y = random(height);
             break;
           case 1:
-            x = width + 100;
+            x = width + offset;
             y = random(height);
             break;
           case 2:
             x = random(width);
-            y = -100;
+            y = -offset;
             break;
-          case 3:
+          default:
             x = random(width);
-            y = height + 100;
+            y = height + offset;
             break;
-        };
+        }
         this.addLeaf(x, y);
       },
       randomLeaf: function () {
@@ -152,15 +139,14 @@ var processingHandler = function (processing) {
         }
         this.animations.push({
           shape: shape || this.randomLeaf(),
-          x_velocity: Math.random(),
-          y_velocity: Math.random(),
+          xVelocity: Math.random(),
+          yVelocity: Math.random(),
           direction: random(Math.PI * 2),
           rotation: random(Math.PI * 2),
-          rotation_velocity: Math.random() / 20,
+          rotationVelocity: Math.random() / 20,
           x: x,
           y: y});
       },
-
       click: function (command) {
         var shape = null;
         if (Math.random() > 0.9) {
@@ -174,14 +160,14 @@ var processingHandler = function (processing) {
         speedDelta: 0,
         directionDelta: 0,
         rotateOverlap: 0,
-        changeCountdown: 0,
+        changeCountdown: 0
       },
       render: function () {
         if(this.animations.length < 20) {
           this.addRandomLeaf();
         }
 
-        this.wind.changeCountdown--;
+        --this.wind.changeCountdown;
         this.wind.direction += this.wind.directionDelta;
         this.wind.speed += this.wind.speedDelta;
 
@@ -198,17 +184,23 @@ var processingHandler = function (processing) {
         windXVelocity = processing.cos(this.wind.direction) * this.wind.speed;
         windYVelocity = processing.sin(this.wind.direction) * this.wind.speed;
 
-        this.animations = _.compact($.map(this.animations, function (animation, index) {
-          animation.x += windXVelocity + animation.x_velocity;
-          animation.y += windYVelocity + animation.y_velocity;
-          animation.rotation += animation.rotation_velocity;
+        for(var index = 0; index < this.animations.length; ++index) {
+          var animation = this.animations[index];
 
-          if(animation.x > width + 100 ||
-              animation.x < -100 ||
-              animation.y > height + 100 ||
-              animation.y < -100) {
-            return null;
+          animation.x += windXVelocity + animation.xVelocity;
+          animation.y += windYVelocity + animation.yVelocity;
+
+          var offset = this.leafRadius * 2;
+          if(animation.x > width + offset ||
+              animation.x < -offset ||
+              animation.y > height + offset ||
+              animation.y < -offset) {
+            this.animations.splice(index, 1);
+            --index;
+            continue;
           }
+
+          animation.rotation += animation.rotationVelocity;
 
           processing.resetMatrix();
           processing.translate(animation.x, animation.y);
@@ -216,16 +208,14 @@ var processingHandler = function (processing) {
 
           processing.noStroke();
           processing.shape(animation.shape, 0, 0, 80, 80);
-
-          return animation;
-        }));
+        }
 
         processing.resetMatrix();
         processing.fill(0, 0, 0, this.alpha);
-        processing.textFont(fonts.quicksandLarge)
+        processing.textFont(fonts.quicksandLarge);
         processing.textSize(54);
         processing.textAlign(processing.PConstants.CENTER);
-        processing.text("PowerPoint is just simulated acetate overhead slides, and to me, that is a kind of a moral crime\n\n-- Alan Kay", 100, height / 2, width - 300, height);
+        processing.text('PowerPoint is just simulated acetate overhead slides, and to me, that is a kind of a moral crime\n\n-- Alan Kay', 100, height / 2, width - 300, height);
       },
       draw: function () {
         this.render();
@@ -260,16 +250,16 @@ var processingHandler = function (processing) {
       },
       rightEdgedText: function(string, y) {
         var textWidth = processing.textWidth(string);
-        processing.text(string, width - textWidth, y); 
+        processing.text(string, width - textWidth, y);
       },
       draw: function () {
         processing.fill(0, 0, 0);
-        processing.textFont(fonts.douar)
+        processing.textFont(fonts.douar);
         processing.textSize(128);
-        this.rightEdgedText("John Barker", height - 110);
-        this.rightEdgedText("Pivotal Labs", height - 10);
+        this.rightEdgedText('John Barker', height - 110);
+        this.rightEdgedText('Pivotal Labs', height - 10);
 
-        if(this.animations == null || this.animations.length > 100) {
+        if(this.animations === null || this.animations.length > 100) {
           this.animations = [[random(width), random(height)]];
         }
 
@@ -295,29 +285,29 @@ var processingHandler = function (processing) {
         processing.resetMatrix();
         processing.stroke(0, 0, 0, 10);
         var oldX = lastAnimation[0], oldY = lastAnimation[1];
-        _.each(this.animations, function (animation, index) {
+        for(var animation in this.animations) {
           processing.line(oldX, oldY, animation[0], animation[1]);
           oldX = animation[0];
           oldY = animation[1];
-        }, this);
+        }
       }};
 
     slides.push(slide);
   };
 
   var loadFonts = function () {
-    fonts.quicksandLarge = processing.createFont("Quicksand", 36);
-    fonts.quicksand = processing.createFont("Quicksand", 24);
-    fonts.douar = processing.createFont("Douar", 24);
+    fonts.quicksandLarge = processing.createFont('Quicksand', 36);
+    fonts.quicksand = processing.createFont('Quicksand', 24);
+    fonts.douar = processing.createFont('Douar', 24);
   };
 
   var loadImages = function () {
-    images.piggy = processing.loadShape("/images/piggy.svg");
+    images.piggy = processing.loadShape('/images/piggy.svg');
     images.leaves = [];
-    images.leaves[0] = processing.loadShape("/images/leaf0.svg");
-    images.leaves[1] = processing.loadShape("/images/leaf1.svg");
-    images.leaves[2] = processing.loadShape("/images/leaf2.svg");
-    images.leaves[3] = processing.loadShape("/images/leaf3.svg");
+    images.leaves[0] = processing.loadShape('/images/leaf0.svg');
+    images.leaves[1] = processing.loadShape('/images/leaf1.svg');
+    images.leaves[2] = processing.loadShape('/images/leaf2.svg');
+    images.leaves[3] = processing.loadShape('/images/leaf3.svg');
   };
 
   var setInitialSlide = function () {
@@ -331,12 +321,12 @@ var processingHandler = function (processing) {
   };
 
   var handleInteractions = function () {
-    socket = new WebSocket("ws://" + location.host);
+    socket = new WebSocket('ws://' + location.host);
 
     socket.onmessage = function(message) {
       var command = JSON.parse(message.data);
 
-      if(command.command === "mouseClick") {
+      if(command.command === 'mouseClick') {
         var slide = slides[currentSlide];
         if(slide.click) {
           slide.click.call(slide, command);
@@ -353,7 +343,7 @@ var processingHandler = function (processing) {
     setInitialSlide();
     handleInteractions();
 
-    processing.frameRate(25);
+    processing.frameRate(30);
     processing.shapeMode(processing.PConstants.CENTER);
   };
 
@@ -363,7 +353,7 @@ var processingHandler = function (processing) {
       clear(slide, previousSlide);
 
       if(previousSlide !== null) {
-        var oldSlide = slides[previousSlide]
+        var oldSlide = slides[previousSlide];
         if(oldSlide.outTransition) {
           oldSlide.outTransition();
         }
@@ -371,7 +361,8 @@ var processingHandler = function (processing) {
 
       slide.inTransition();
 
-      if(transitionLifetime-- == 0) {
+      --transitionLifetime;
+      if(transitionLifetime === 0) {
         inTransition = false;
       }
     } else {
@@ -382,19 +373,19 @@ var processingHandler = function (processing) {
 
   var moveNextSlide = function () {
     if(currentSlide < slides.length - 1) {
-      $.bbq.pushState({slide: findSlideName(currentSlide + 1)}, 2);
+      $.bbq.pushState({slide: slideNames[currentSlide + 1]}, 2);
     }
   };
 
   var movePreviousSlide = function () {
     if(currentSlide > 0) {
-      $.bbq.pushState({slide: findSlideName(currentSlide - 1)}, 2);
+      $.bbq.pushState({slide: slideNames[currentSlide - 1]}, 2);
     }
   };
 
   processing.keyReleased = function () {
     if(this.key.code != this.PConstants.CODED) {
-      return;
+      return false;
     }
 
     if(this.keyCode == this.PConstants.RIGHT) {
@@ -407,13 +398,13 @@ var processingHandler = function (processing) {
   };
 
   processing.mouseClicked = function () {
-    socket.send(JSON.stringify({command: "mouseClick", x: this.mouseX, y: this.mouseY}));
+    socket.send(JSON.stringify({command: 'mouseClick', x: this.mouseX, y: this.mouseY}));
   };
 
   var switchToSlide = function(slide) {
     previousSlide = currentSlide;
 
-    currentSlide = findSlideIndex(slide);
+    currentSlide = slideNames.indexOf(slide);
     slides[currentSlide].init();
 
     inTransition = true;
@@ -422,7 +413,7 @@ var processingHandler = function (processing) {
 
   $(window).on('hashchange', function (event) {
     var nextSlide = event.getState('slide');
-    switchToSlide(nextSlide);
+    switchToSlide(nextSlide || 'intro');
   });
 
   $(window).on('resize', function () {
