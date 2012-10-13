@@ -8,8 +8,8 @@
       [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1, maximum-scale=1"}]
       (include-js "//cdnjs.cloudflare.com/ajax/libs/jquery/1.8.2/jquery.min.js")
-      (include-js "//cachedcommons.org/cache/jquery-bbq/1.2.1/javascripts/jquery-bbq.js")
-      (include-js "//cdnjs.cloudflare.com/ajax/libs/processing.js/1.3.6/processing-api.min.js")
+      (include-js "//cdnjs.cloudflare.com/ajax/libs/jquery.ba-bbq/1.2.1/jquery.ba-bbq.min.js")
+      (include-js "//cdnjs.cloudflare.com/ajax/libs/processing.js/1.4.1/processing-api.min.js")
       (include-js "/javascript/web_socket.js")
       (include-js "/javascript/slides.js")
       (include-css "http://openfontlibrary.org/face/douar-outline")
